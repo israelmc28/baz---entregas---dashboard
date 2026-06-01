@@ -18,14 +18,16 @@ const USUARIOS = [
 const DESTINOS = ["HUB VERACRUZ","HUB TAMPICO","HUB OAXACA","HUB PACHUCA","RETAIL"];
 
 const TRANSPORTISTAS_CFG = [
-  { nombre:"LTI",     color:"#FF6B00", icon:"🚛", caps:[50,90,110] },
+  { nombre:"LTI",     color:"#FF6B00", icon:"🚛", caps:[18,50,70,90,110] },
   { nombre:"Moro",    color:"#FFB347", icon:"🚚", caps:[70,80]     },
   { nombre:"Levstom", color:"#A78BFA", icon:"🚐", caps:[110]       },
   { nombre:"Aguilar", color:"#4A9EFF", icon:"🏗️", caps:[80]        },
 ];
 
 const PLAN_INICIAL = [
+  { id:"lti-18",     transportista:"LTI",     color:"#FF6B00", icon:"🚛", capacidad:18,  plan:0,  cargadas:0, surtidas:0 },
   { id:"lti-50",     transportista:"LTI",     color:"#FF6B00", icon:"🚛", capacidad:50,  plan:14, cargadas:0, surtidas:0 },
+  { id:"lti-70",     transportista:"LTI",     color:"#FF6B00", icon:"🚛", capacidad:70,  plan:0,  cargadas:0, surtidas:0 },
   { id:"lti-90",     transportista:"LTI",     color:"#FF6B00", icon:"🚛", capacidad:90,  plan:3,  cargadas:0, surtidas:0 },
   { id:"lti-110",    transportista:"LTI",     color:"#FF6B00", icon:"🚛", capacidad:110, plan:4,  cargadas:0, surtidas:0 },
   { id:"moro-70",    transportista:"Moro",    color:"#FFB347", icon:"🚚", capacidad:70,  plan:1,  cargadas:0, surtidas:0 },
@@ -33,6 +35,8 @@ const PLAN_INICIAL = [
   { id:"levstom-110",transportista:"Levstom", color:"#A78BFA", icon:"🚐", capacidad:110, plan:0,  cargadas:0, surtidas:0 },
   { id:"aguilar-80", transportista:"Aguilar", color:"#4A9EFF", icon:"🏗️", capacidad:80,  plan:0,  cargadas:0, surtidas:0 },
 ];
+
+const FECHA_INICIAL = "30 de mayo de 2026";
 
 function pct(a,b){ return b===0?0:Math.round((a/b)*100); }
 function sem(v){ return v>=80?C.verde:v>=40?C.amarillo:v>0?C.rojo:C.sub; }
@@ -93,7 +97,7 @@ function Login({ onLogin }) {
   );
 }
 
-function Dashboard({ plan, cargas }) {
+function Dashboard({ plan, cargas, fechaPlan }) {
   const totalPlan = plan.reduce((a,r)=>a+r.plan,0);
   const totalCarg = plan.reduce((a,r)=>a+r.cargadas,0);
   const totalCol  = cargas.filter(c=>c.economico&&c.economico.trim()!=="").length;
@@ -118,7 +122,7 @@ function Dashboard({ plan, cargas }) {
           marginBottom:14,paddingBottom:12,borderBottom:"1px solid "+C.g3}}>
           <Logo width={100}/>
           <div style={{textAlign:"right"}}>
-            <div style={{fontSize:10,color:C.sub}}>30 mayo 2026</div>
+            <div style={{fontSize:11,color:C.naranja,fontWeight:700}}>{fechaPlan}</div>
             <div style={{fontSize:9,color:C.g4,marginTop:1}}>{now}</div>
           </div>
         </div>
@@ -248,7 +252,7 @@ function PanelCargas({ cargas, setCargas, plan, setPlan, hist, setHist, user, gu
   const [cap,setCap]=useState(50);
   const [destino,setDestino]=useState(DESTINOS[0]);
   const fileRef=useRef(null);
-  const capsPorTrans={LTI:[50,90,110],Moro:[70,80],Levstom:[110],Aguilar:[80]};
+  const capsPorTrans={LTI:[18,50,70,90,110],Moro:[70,80],Levstom:[110],Aguilar:[80]};
   const coloresTrans={LTI:"#FF6B00",Moro:"#FFB347",Levstom:"#A78BFA",Aguilar:"#4A9EFF"};
   const destiColor={"HUB VERACRUZ":C.verde,"HUB TAMPICO":C.azul,"HUB OAXACA":C.amarillo,"HUB PACHUCA":C.morado,"RETAIL":C.naranja};
   const estadoColor={pendiente:C.amarillo,cargada:C.verde,surtida:C.azul};
@@ -626,6 +630,107 @@ function Historial({ hist }) {
   );
 }
 
+function PanelConfig({ plan, fechaPlan, onGuardarFecha, onGuardarPlan }) {
+  const [fecha,setFecha]=useState(fechaPlan);
+  const [planEdit,setPlanEdit]=useState(plan.map(r=>({...r})));
+  const [guardado,setGuardado]=useState(false);
+
+  function cambiarPlan(id,val){
+    const n=Math.max(0,parseInt(val)||0);
+    setPlanEdit(prev=>prev.map(r=>r.id===id?{...r,plan:n}:r));
+  }
+
+  function guardarTodo(){
+    onGuardarFecha(fecha);
+    // resetear cargadas/surtidas solo si el plan cambia, mantener avance
+    const nuevo=planEdit.map(r=>({
+      ...r,
+      cargadas:Math.min(r.cargadas,r.plan),
+      surtidas:Math.min(r.surtidas,r.plan),
+    }));
+    onGuardarPlan(nuevo);
+    setGuardado(true);
+    setTimeout(()=>setGuardado(false),2500);
+  }
+
+  const grupos=[...new Set(planEdit.map(r=>r.transportista))];
+
+  return (
+    <div style={{padding:"12px 12px 40px"}}>
+      <p style={{fontSize:9,letterSpacing:3,color:C.naranja,textTransform:"uppercase",marginBottom:14}}>
+        Configuracion del Plan
+      </p>
+
+      {/* Fecha */}
+      <div style={{background:C.g2,borderRadius:12,padding:16,marginBottom:14}}>
+        <p style={{fontSize:11,color:C.sub,letterSpacing:2,textTransform:"uppercase",marginBottom:8}}>
+          Fecha del Plan
+        </p>
+        <input value={fecha} onChange={e=>setFecha(e.target.value)}
+          placeholder="Ej. 31 de mayo de 2026"
+          style={{width:"100%",background:C.g3,border:"1px solid "+C.naranja+"55",borderRadius:9,
+            padding:"11px 12px",color:C.txt,fontSize:14,fontWeight:700,outline:"none"}}/>
+        <p style={{fontSize:10,color:C.sub,marginTop:6}}>
+          Escribe la fecha como quieres que aparezca en el dashboard
+        </p>
+      </div>
+
+      {/* Plan por transportista */}
+      <div style={{background:C.g2,borderRadius:12,padding:16,marginBottom:16}}>
+        <p style={{fontSize:11,color:C.sub,letterSpacing:2,textTransform:"uppercase",marginBottom:12}}>
+          Unidades del Plan por Linea
+        </p>
+        {grupos.map(nom=>{
+          const rows=planEdit.filter(r=>r.transportista===nom);
+          const cfg=TRANSPORTISTAS_CFG.find(t=>t.nombre===nom);
+          const color=cfg?cfg.color:C.naranja;
+          const icon=cfg?cfg.icon:"🚛";
+          return (
+            <div key={nom} style={{marginBottom:16,paddingBottom:16,borderBottom:"1px solid "+C.g3}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                <span style={{fontSize:14}}>{icon}</span>
+                <span style={{fontSize:15,fontWeight:900,color}}>{nom}</span>
+              </div>
+              {rows.map(r=>(
+                <div key={r.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                  <div style={{flex:1,background:C.g3,borderRadius:8,padding:"8px 12px"}}>
+                    <span style={{fontSize:13,color,fontWeight:700}}>{r.capacidad} m3</span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <button onClick={()=>cambiarPlan(r.id,r.plan-1)}
+                      style={{width:32,height:32,borderRadius:8,border:"none",cursor:"pointer",
+                        background:r.plan<=0?C.g4:C.rojo+"33",color:r.plan<=0?C.g4:C.rojo,
+                        fontSize:18,fontWeight:700}}>-</button>
+                    <input type="number" value={r.plan} onChange={e=>cambiarPlan(r.id,e.target.value)}
+                      style={{width:52,textAlign:"center",background:C.g3,
+                        border:"1px solid "+color+"55",borderRadius:8,padding:"6px 4px",
+                        color:C.txt,fontSize:16,fontWeight:900,outline:"none"}}/>
+                    <button onClick={()=>cambiarPlan(r.id,r.plan+1)}
+                      style={{width:32,height:32,borderRadius:8,border:"none",cursor:"pointer",
+                        background:C.verde+"33",color:C.verde,fontSize:18,fontWeight:700}}>+</button>
+                  </div>
+                  <span style={{fontSize:10,color:C.sub,minWidth:30}}>uds</span>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Boton guardar */}
+      <button onClick={guardarTodo}
+        style={{width:"100%",padding:14,borderRadius:12,border:"none",cursor:"pointer",
+          background:guardado?"linear-gradient(90deg,#2d7a4f,"+C.verde+")":"linear-gradient(90deg,"+C.naranjaD+","+C.naranja+")",
+          color:"#fff",fontSize:15,fontWeight:900,transition:"background .3s"}}>
+        {guardado?"✅ Guardado correctamente":"💾 Guardar cambios del plan"}
+      </button>
+      <p style={{fontSize:10,color:C.sub,textAlign:"center",marginTop:10,lineHeight:1.5}}>
+        Al guardar, la fecha y las cantidades se actualizan para todos los usuarios en tiempo real.
+      </p>
+    </div>
+  );
+}
+
 export default function App() {
   const [user,setUser]=useState(null);
   const [plan,setPlan]=useState(PLAN_INICIAL);
@@ -634,13 +739,15 @@ export default function App() {
   const [tab,setTab]=useState("dashboard");
   const [saving,setSaving]=useState(false);
   const [lastSync,setLastSync]=useState(null);
-  const SK={plan:"baz-plan-v3",cargas:"baz-cargas-v3",hist:"baz-hist-v3"};
+  const [fechaPlan,setFechaPlan]=useState(FECHA_INICIAL);
+  const SK={plan:"baz-plan-v4",cargas:"baz-cargas-v4",hist:"baz-hist-v4",fecha:"baz-fecha-v4"};
 
   const cargarDatos=useCallback(async()=>{
     try{
       const rp=await window.storage.get(SK.plan,true);   if(rp) setPlan(JSON.parse(rp.value));
       const rc=await window.storage.get(SK.cargas,true); if(rc) setCargas(JSON.parse(rc.value));
       const rh=await window.storage.get(SK.hist,true);   if(rh) setHist(JSON.parse(rh.value));
+      const rf=await window.storage.get(SK.fecha,true);  if(rf) setFechaPlan(rf.value);
       setLastSync(new Date());
     }catch(_){}
   },[]);
@@ -660,6 +767,16 @@ export default function App() {
     }catch(_){}
     setSaving(false);
     setLastSync(new Date());
+  }
+
+  async function guardarFecha(f){
+    setFechaPlan(f);
+    try{ await window.storage.set(SK.fecha,f,true); }catch(_){}
+  }
+
+  async function guardarPlan(np){
+    setPlan(np);
+    try{ await window.storage.set(SK.plan,JSON.stringify(np),true); }catch(_){}
   }
 
   if(!user) return <Login onLogin={u=>{setUser(u);cargarDatos();}}/>;
@@ -693,7 +810,7 @@ export default function App() {
         </div>
         <div style={{background:C.g2,borderRadius:10,padding:"9px 13px"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-            <span style={{fontSize:10,color:C.sub,letterSpacing:1,textTransform:"uppercase"}}>Avance 30 may 2026</span>
+            <span style={{fontSize:10,color:C.sub,letterSpacing:1,textTransform:"uppercase"}}>Avance {fechaPlan}</span>
             <span style={{fontSize:24,fontWeight:900,color:avance>0?sem(avance):C.sub,lineHeight:1}}>
               {avance}<span style={{fontSize:13,fontWeight:400}}>%</span>
             </span>
@@ -711,10 +828,15 @@ export default function App() {
       <div style={{display:"flex",gap:6,padding:"10px 12px 8px",
         position:"sticky",top:142,background:C.negro,zIndex:50,
         borderBottom:"1px solid "+C.g2}}>
-        {[{id:"dashboard",label:"Dashboard",icon:"📊"},{id:"cargas",label:"Cargas",icon:"📦"},{id:"historial",label:"Historial",icon:"📋"}].map(t=>(
+        {[
+          {id:"dashboard",label:"Dashboard",icon:"📊"},
+          {id:"cargas",label:"Cargas",icon:"📦"},
+          {id:"historial",label:"Historial",icon:"📋"},
+          ...(user.rol==="admin"?[{id:"config",label:"Config",icon:"⚙️"}]:[])
+        ].map(t=>(
           <button key={t.id} onClick={()=>setTab(t.id)} style={{
             flex:1,padding:"9px 4px",borderRadius:10,border:"none",cursor:"pointer",
-            fontWeight:700,fontSize:12,
+            fontWeight:700,fontSize:11,
             background:tab===t.id?C.naranja:C.g2,
             color:tab===t.id?"#fff":C.sub,
             boxShadow:tab===t.id?"0 4px 14px "+C.naranja+"44":"none"}}>
@@ -722,7 +844,7 @@ export default function App() {
           </button>
         ))}
       </div>
-      {tab==="dashboard"&&<Dashboard plan={plan} cargas={cargas}/>}
+      {tab==="dashboard"&&<Dashboard plan={plan} cargas={cargas} fechaPlan={fechaPlan}/>}
       {tab==="cargas"&&(
         <PanelCargas cargas={cargas} setCargas={setCargas}
           plan={plan} setPlan={setPlan}
@@ -730,6 +852,11 @@ export default function App() {
           user={user} guardar={guardar}/>
       )}
       {tab==="historial"&&<Historial hist={hist}/>}
+      {tab==="config"&&user.rol==="admin"&&(
+        <PanelConfig plan={plan} fechaPlan={fechaPlan}
+          onGuardarFecha={guardarFecha}
+          onGuardarPlan={guardarPlan}/>
+      )}
       <div style={{textAlign:"center",padding:"0 0 28px",fontSize:8,color:C.g4,letterSpacing:2}}>
         BAZ ENTREGAS - GRUPO SALINAS - OPERACION LOGISTICA
       </div>
