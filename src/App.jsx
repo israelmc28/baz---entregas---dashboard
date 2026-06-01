@@ -97,7 +97,7 @@ function Login({ onLogin }) {
   );
 }
 
-function Dashboard({ plan, cargas, fechaPlan }) {
+function Dashboard({ plan, cargas, fechaPlan, isDesktop }) {
   const totalPlan = plan.reduce((a,r)=>a+r.plan,0);
   const totalCarg = plan.reduce((a,r)=>a+r.cargadas,0);
   const totalCol  = cargas.filter(c=>c.economico&&c.economico.trim()!=="").length;
@@ -115,126 +115,153 @@ function Dashboard({ plan, cargas, fechaPlan }) {
   })).filter(d=>d.total>0);
 
   return (
-    <div style={{padding:"12px 12px 24px"}}>
-      <div style={{background:"linear-gradient(160deg,#111,"+C.g1+")",
-        border:"1.5px solid #FF6B0044",borderRadius:16,padding:16,marginBottom:14}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-          marginBottom:14,paddingBottom:12,borderBottom:"1px solid "+C.g3}}>
-          <Logo width={100}/>
-          <div style={{textAlign:"right"}}>
-            <div style={{fontSize:11,color:C.naranja,fontWeight:700}}>{fechaPlan}</div>
-            <div style={{fontSize:9,color:C.g4,marginTop:1}}>{now}</div>
-          </div>
-        </div>
-        <div style={{background:C.g2,borderRadius:12,padding:"12px 14px",marginBottom:12}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-            <span style={{fontSize:11,color:C.sub,letterSpacing:1,textTransform:"uppercase"}}>Avance Global del Plan</span>
-            <span style={{fontSize:32,fontWeight:900,color:sem(pCarg),lineHeight:1}}>
-              {pCarg}<span style={{fontSize:16,fontWeight:400}}>%</span>
-            </span>
-          </div>
-          <div style={{height:10,background:C.g4,borderRadius:5,overflow:"hidden"}}>
-            <div style={{height:"100%",width:pCarg+"%",borderRadius:5,
-              background:"linear-gradient(90deg,"+C.naranjaD+","+C.naranja+","+C.naranjaL+")"}}/>
-          </div>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-          {[
-            {label:"Plan Total",val:totalPlan,p:null,color:C.naranja,icon:"📋"},
-            {label:"Cargadas",val:totalCarg,p:pCarg,color:C.verde,icon:"✅"},
-            {label:"Colocadas",val:totalCol,p:pCol,color:C.azul,icon:"🅿️"},
-            {label:"Surtidas",val:totalSurt,p:pSurt,color:C.amarillo,icon:"🚀"},
-          ].map(k=>(
-            <div key={k.label} style={{background:C.g2,borderRadius:12,padding:"12px 14px",borderLeft:"3px solid "+k.color}}>
-              <div style={{fontSize:13,marginBottom:3}}>{k.icon}</div>
-              <div style={{fontSize:28,fontWeight:900,color:k.color,lineHeight:1}}>{k.val}</div>
-              {k.p!==null&&<div style={{fontSize:13,color:k.p>0?sem(k.p):C.sub,fontWeight:700,marginTop:2}}>{k.p}%</div>}
-              <div style={{fontSize:10,color:C.sub,marginTop:4}}>{k.label}</div>
+    <div style={{padding: isDesktop?"24px 32px 40px":"12px 12px 24px"}}>
+      {/* En escritorio: 2 columnas; en móvil: 1 columna */}
+      <div style={{display:"grid",
+        gridTemplateColumns: isDesktop?"1fr 1fr":"1fr",
+        gap: isDesktop?24:0, alignItems:"start"}}>
+
+        {/* COLUMNA IZQUIERDA: panel captureable */}
+        <div style={{background:"linear-gradient(160deg,#111,"+C.g1+")",
+          border:"1.5px solid #FF6B0044",borderRadius:16,padding:isDesktop?20:16,
+          marginBottom: isDesktop?0:14}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+            marginBottom:14,paddingBottom:12,borderBottom:"1px solid "+C.g3}}>
+            <Logo width={isDesktop?130:100}/>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:isDesktop?13:11,color:C.naranja,fontWeight:700}}>{fechaPlan}</div>
+              <div style={{fontSize:9,color:C.g4,marginTop:1}}>{now}</div>
             </div>
-          ))}
-        </div>
-        <div style={{background:C.g2,borderRadius:12,padding:"12px 14px",marginBottom:12}}>
-          <p style={{fontSize:9,letterSpacing:3,color:C.sub,textTransform:"uppercase",marginBottom:12}}>Por Linea Transportista</p>
-          {TRANSPORTISTAS_CFG.map(cfg=>{
-            const rows=plan.filter(r=>r.transportista===cfg.nombre);
-            const tp=rows.reduce((a,r)=>a+r.plan,0);
-            if(tp===0) return null;
-            const tc=rows.reduce((a,r)=>a+r.cargadas,0);
-            const ts=rows.reduce((a,r)=>a+r.surtidas,0);
-            const tCol=cargas.filter(c=>c.transportista===cfg.nombre&&c.economico&&c.economico.trim()!=="").length;
-            const p=pct(tc,tp);
-            return (
-              <div key={cfg.nombre} style={{marginBottom:14,paddingBottom:14,borderBottom:"1px solid "+C.g3}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                  <span style={{fontSize:15,fontWeight:900,color:cfg.color}}>{cfg.icon} {cfg.nombre}</span>
-                  <span style={{fontSize:15,fontWeight:800,color:sem(p)}}>{tc}/{tp} {p}%</span>
-                </div>
-                <div style={{height:5,background:C.g4,borderRadius:3,overflow:"hidden",marginBottom:8}}>
-                  <div style={{height:"100%",width:p+"%",background:cfg.color,borderRadius:3}}/>
-                </div>
-                <div style={{display:"flex",flexDirection:"column",gap:5}}>
-                  {rows.map(r=>{
-                    const rp=pct(r.cargadas,r.plan);
-                    const rCol=cargas.filter(c=>c.transportista===r.transportista&&c.capacidad===r.capacidad&&c.economico&&c.economico.trim()!=="").length;
-                    return (
-                      <div key={r.id} style={{background:C.g3,borderRadius:8,padding:"7px 10px"}}>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                          <span style={{fontSize:12,color:cfg.color,fontWeight:700}}>{r.capacidad} m3</span>
-                          <div style={{display:"flex",gap:10}}>
-                            <span style={{fontSize:10,color:C.verde}}>Carg {r.cargadas}/{r.plan}</span>
-                            <span style={{fontSize:10,color:C.azul}}>Col {rCol}</span>
-                            <span style={{fontSize:10,color:C.amarillo}}>Sur {r.surtidas}</span>
-                          </div>
-                        </div>
-                        <div style={{height:4,background:C.g4,borderRadius:2,overflow:"hidden"}}>
-                          <div style={{height:"100%",width:rp+"%",background:cfg.color,borderRadius:2}}/>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div style={{display:"flex",gap:8,marginTop:8}}>
-                  <div style={{flex:1,background:C.g3,borderRadius:7,padding:"5px 8px",textAlign:"center"}}>
-                    <div style={{fontSize:14,fontWeight:900,color:C.azul}}>{tCol}</div>
-                    <div style={{fontSize:8,color:C.sub}}>Colocadas</div>
-                  </div>
-                  <div style={{flex:1,background:C.g3,borderRadius:7,padding:"5px 8px",textAlign:"center"}}>
-                    <div style={{fontSize:14,fontWeight:900,color:C.amarillo}}>{ts}</div>
-                    <div style={{fontSize:8,color:C.sub}}>Surtidas</div>
-                  </div>
-                  <div style={{flex:1,background:C.g3,borderRadius:7,padding:"5px 8px",textAlign:"center"}}>
-                    <div style={{fontSize:14,fontWeight:900,color:C.rojo}}>{tp-tc}</div>
-                    <div style={{fontSize:8,color:C.sub}}>Pendientes</div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        {porDestino.length>0&&(
+          </div>
+          {/* Avance global */}
           <div style={{background:C.g2,borderRadius:12,padding:"12px 14px",marginBottom:12}}>
-            <p style={{fontSize:9,letterSpacing:3,color:C.sub,textTransform:"uppercase",marginBottom:10}}>Por Destino</p>
-            {porDestino.map(d=>(
-              <div key={d.destino} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-                <div style={{width:8,height:8,borderRadius:2,background:destiColor[d.destino]||C.sub,flexShrink:0}}/>
-                <span style={{fontSize:12,color:destiColor[d.destino]||C.txt,fontWeight:700,flex:1}}>{d.destino}</span>
-                <span style={{fontSize:11,color:C.sub}}>{d.total} cargas</span>
-                <span style={{fontSize:11,color:C.azul}}>Col {d.colocadas}</span>
-                <span style={{fontSize:11,color:C.amarillo}}>Sur {d.surtidas}</span>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+              <span style={{fontSize:isDesktop?13:11,color:C.sub,letterSpacing:1,textTransform:"uppercase"}}>Avance Global del Plan</span>
+              <span style={{fontSize:isDesktop?38:32,fontWeight:900,color:sem(pCarg),lineHeight:1}}>
+                {pCarg}<span style={{fontSize:isDesktop?20:16,fontWeight:400}}>%</span>
+              </span>
+            </div>
+            <div style={{height:10,background:C.g4,borderRadius:5,overflow:"hidden"}}>
+              <div style={{height:"100%",width:pCarg+"%",borderRadius:5,
+                background:"linear-gradient(90deg,"+C.naranjaD+","+C.naranja+","+C.naranjaL+")"}}/>
+            </div>
+          </div>
+          {/* 4 KPIs */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+            {[
+              {label:"Plan Total",val:totalPlan,p:null,color:C.naranja,icon:"📋"},
+              {label:"Cargadas",val:totalCarg,p:pCarg,color:C.verde,icon:"✅"},
+              {label:"Colocadas",val:totalCol,p:pCol,color:C.azul,icon:"🅿️"},
+              {label:"Surtidas",val:totalSurt,p:pSurt,color:C.amarillo,icon:"🚀"},
+            ].map(k=>(
+              <div key={k.label} style={{background:C.g2,borderRadius:12,padding:isDesktop?"16px 18px":"12px 14px",borderLeft:"3px solid "+k.color}}>
+                <div style={{fontSize:isDesktop?16:13,marginBottom:3}}>{k.icon}</div>
+                <div style={{fontSize:isDesktop?34:28,fontWeight:900,color:k.color,lineHeight:1}}>{k.val}</div>
+                {k.p!==null&&<div style={{fontSize:isDesktop?15:13,color:k.p>0?sem(k.p):C.sub,fontWeight:700,marginTop:2}}>{k.p}%</div>}
+                <div style={{fontSize:isDesktop?11:10,color:C.sub,marginTop:4}}>{k.label}</div>
               </div>
             ))}
           </div>
-        )}
-        <div style={{textAlign:"center",fontSize:8,color:C.g4,letterSpacing:2}}>
-          BAZ ENTREGAS - GRUPO SALINAS - OPERACION LOGISTICA
+          {/* Por destino (solo si hay cargas) */}
+          {porDestino.length>0&&(
+            <div style={{background:C.g2,borderRadius:12,padding:"12px 14px",marginBottom:12}}>
+              <p style={{fontSize:9,letterSpacing:3,color:C.sub,textTransform:"uppercase",marginBottom:10}}>Por Destino</p>
+              {porDestino.map(d=>(
+                <div key={d.destino} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                  <div style={{width:8,height:8,borderRadius:2,background:destiColor[d.destino]||C.sub,flexShrink:0}}/>
+                  <span style={{fontSize:isDesktop?13:12,color:destiColor[d.destino]||C.txt,fontWeight:700,flex:1}}>{d.destino}</span>
+                  <span style={{fontSize:11,color:C.sub}}>{d.total} cargas</span>
+                  <span style={{fontSize:11,color:C.azul}}>Col {d.colocadas}</span>
+                  <span style={{fontSize:11,color:C.amarillo}}>Sur {d.surtidas}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{textAlign:"center",fontSize:8,color:C.g4,letterSpacing:2}}>
+            BAZ ENTREGAS - GRUPO SALINAS - OPERACION LOGISTICA
+          </div>
         </div>
-      </div>
-      <div style={{background:"#4A9EFF11",border:"1px solid #4A9EFF33",borderRadius:10,
-        padding:"10px 14px",display:"flex",gap:8,alignItems:"center"}}>
-        <span style={{fontSize:18}}>📸</span>
-        <p style={{fontSize:11,color:C.sub,lineHeight:1.5}}>
-          Captura el panel de arriba para compartirlo con gerencia.
-        </p>
+
+        {/* COLUMNA DERECHA: detalle por transportista */}
+        <div>
+          <div style={{background:C.g2,borderRadius:12,padding:isDesktop?20:16,marginBottom:12}}>
+            <p style={{fontSize:9,letterSpacing:3,color:C.sub,textTransform:"uppercase",marginBottom:12}}>Por Linea Transportista</p>
+            {TRANSPORTISTAS_CFG.map(cfg=>{
+              const rows=plan.filter(r=>r.transportista===cfg.nombre);
+              const tp=rows.reduce((a,r)=>a+r.plan,0);
+              if(tp===0) return null;
+              const tc=rows.reduce((a,r)=>a+r.cargadas,0);
+              const ts=rows.reduce((a,r)=>a+r.surtidas,0);
+              const tCol=cargas.filter(c=>c.transportista===cfg.nombre&&c.economico&&c.economico.trim()!=="").length;
+              const p=pct(tc,tp);
+              return (
+                <div key={cfg.nombre} style={{marginBottom:16,paddingBottom:16,borderBottom:"1px solid "+C.g3}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                    <span style={{fontSize:isDesktop?16:15,fontWeight:900,color:cfg.color}}>{cfg.icon} {cfg.nombre}</span>
+                    <span style={{fontSize:isDesktop?16:15,fontWeight:800,color:sem(p)}}>{tc}/{tp} · {p}%</span>
+                  </div>
+                  <div style={{height:5,background:C.g4,borderRadius:3,overflow:"hidden",marginBottom:8}}>
+                    <div style={{height:"100%",width:p+"%",background:cfg.color,borderRadius:3}}/>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:8}}>
+                    {rows.map(r=>{
+                      const rp=pct(r.cargadas,r.plan);
+                      const rCol=cargas.filter(c=>c.transportista===r.transportista&&c.capacidad===r.capacidad&&c.economico&&c.economico.trim()!=="").length;
+                      return (
+                        <div key={r.id} style={{background:C.g3,borderRadius:8,padding:"7px 10px"}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                            <span style={{fontSize:isDesktop?13:12,color:cfg.color,fontWeight:700}}>{r.capacidad} m3</span>
+                            <div style={{display:"flex",gap:isDesktop?16:10}}>
+                              <span style={{fontSize:isDesktop?12:10,color:C.verde}}>Carg {r.cargadas}/{r.plan}</span>
+                              <span style={{fontSize:isDesktop?12:10,color:C.azul}}>Col {rCol}</span>
+                              <span style={{fontSize:isDesktop?12:10,color:C.amarillo}}>Sur {r.surtidas}</span>
+                            </div>
+                          </div>
+                          <div style={{height:4,background:C.g4,borderRadius:2,overflow:"hidden"}}>
+                            <div style={{height:"100%",width:rp+"%",background:cfg.color,borderRadius:2}}/>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{display:"flex",gap:8}}>
+                    <div style={{flex:1,background:C.g3,borderRadius:7,padding:"5px 8px",textAlign:"center"}}>
+                      <div style={{fontSize:isDesktop?16:14,fontWeight:900,color:C.azul}}>{tCol}</div>
+                      <div style={{fontSize:8,color:C.sub}}>Colocadas</div>
+                    </div>
+                    <div style={{flex:1,background:C.g3,borderRadius:7,padding:"5px 8px",textAlign:"center"}}>
+                      <div style={{fontSize:isDesktop?16:14,fontWeight:900,color:C.amarillo}}>{ts}</div>
+                      <div style={{fontSize:8,color:C.sub}}>Surtidas</div>
+                    </div>
+                    <div style={{flex:1,background:C.g3,borderRadius:7,padding:"5px 8px",textAlign:"center"}}>
+                      <div style={{fontSize:isDesktop?16:14,fontWeight:900,color:C.rojo}}>{tp-tc}</div>
+                      <div style={{fontSize:8,color:C.sub}}>Pendientes</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {!isDesktop&&(
+            <div style={{background:"#4A9EFF11",border:"1px solid #4A9EFF33",borderRadius:10,
+              padding:"10px 14px",display:"flex",gap:8,alignItems:"center"}}>
+              <span style={{fontSize:18}}>📸</span>
+              <p style={{fontSize:11,color:C.sub,lineHeight:1.5}}>
+                Captura el panel de arriba para compartirlo con gerencia.
+              </p>
+            </div>
+          )}
+          {isDesktop&&(
+            <div style={{background:"#4A9EFF11",border:"1px solid #4A9EFF33",borderRadius:10,
+              padding:"12px 16px",display:"flex",gap:10,alignItems:"center"}}>
+              <span style={{fontSize:20}}>💻</span>
+              <p style={{fontSize:12,color:C.sub,lineHeight:1.5}}>
+                En escritorio puedes usar <strong style={{color:C.txt}}>Ctrl + P</strong> para imprimir o guardar como PDF, o tomar captura con <strong style={{color:C.txt}}>Windows + Shift + S</strong>.
+              </p>
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );
@@ -785,9 +812,11 @@ export default function App() {
   const totalC=plan.reduce((a,r)=>a+r.cargadas,0);
   const avance=pct(totalC,totalP);
 
+  const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
+
   return (
-    <div style={{background:C.negro,minHeight:"100vh",maxWidth:430,margin:"0 auto",
-      fontFamily:"Arial,sans-serif",color:C.txt}}>
+    <div style={{background:C.negro,minHeight:"100vh",fontFamily:"Arial,sans-serif",color:C.txt,
+      ...(isDesktop ? {} : {maxWidth:430,margin:"0 auto"})}}>
       <div style={{background:"linear-gradient(160deg,#111,"+C.g1+")",
         borderBottom:"2.5px solid "+C.naranja,padding:"14px 16px 12px",
         position:"sticky",top:0,zIndex:100}}>
@@ -844,18 +873,18 @@ export default function App() {
           </button>
         ))}
       </div>
-      {tab==="dashboard"&&<Dashboard plan={plan} cargas={cargas} fechaPlan={fechaPlan}/>}
+      {tab==="dashboard"&&<Dashboard plan={plan} cargas={cargas} fechaPlan={fechaPlan} isDesktop={isDesktop}/>}
       {tab==="cargas"&&(
         <PanelCargas cargas={cargas} setCargas={setCargas}
           plan={plan} setPlan={setPlan}
           hist={hist} setHist={setHist}
-          user={user} guardar={guardar}/>
+          user={user} guardar={guardar} isDesktop={isDesktop}/>
       )}
-      {tab==="historial"&&<Historial hist={hist}/>}
+      {tab==="historial"&&<Historial hist={hist} isDesktop={isDesktop}/>}
       {tab==="config"&&user.rol==="admin"&&(
         <PanelConfig plan={plan} fechaPlan={fechaPlan}
           onGuardarFecha={guardarFecha}
-          onGuardarPlan={guardarPlan}/>
+          onGuardarPlan={guardarPlan} isDesktop={isDesktop}/>
       )}
       <div style={{textAlign:"center",padding:"0 0 28px",fontSize:8,color:C.g4,letterSpacing:2}}>
         BAZ ENTREGAS - GRUPO SALINAS - OPERACION LOGISTICA
